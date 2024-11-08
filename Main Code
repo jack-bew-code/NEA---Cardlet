@@ -1,0 +1,273 @@
+import tkinter as tk  # Import the main tkinter module for GUI creation
+from tkinter import ttk, messagebox, PhotoImage  # Import additional tkinter modules for styling and images
+import sqlite3  # Import sqlite3 for database management
+
+#----------------------database for the login system-------------------------------------
+
+
+
+#----------------------database for the flashcard system---------------------------------
+
+# Connect to (or create if it doesn’t exist) the database named 'flashcards.db'
+conn = sqlite3.connect('flashcards.db')
+cursor = conn.cursor()  # Create a connection to a cursor to interact with the database
+
+# Create a table named 'flashcards' if it doesn’t already exist.
+# This table has three columns: set_name (text input), term (text input), and definition (text input ).
+cursor.execute('''CREATE TABLE IF NOT EXISTS flashcards 
+            (set_name TEXT, term TEXT, definition TEXT)''')
+conn.commit()  # Save changes to the database
+
+
+# This is the class for the whole flashcard app (it boots the main window)
+class FlashcardPages(tk.Tk):
+    def __init__(self, *args):
+        # Initialize the GUI
+        tk.Tk.__init__(self, *args)
+        self.title('Cardlet') 
+
+        # Set up the app icon
+        cardlet_logo = PhotoImage(file="C:/cardlet-logo.png")
+        self.iconphoto(True, cardlet_logo)
+
+        # Create a container frame to hold the different pages (Login and Flashcard pages)
+        container = tk.Frame(self)
+        container.pack(side='top', fill='both', expand=True)  # Make the frame fill the window
+        container.grid_rowconfigure(0, weight=1)  # Configure row resizing
+        container.grid_columnconfigure(0, weight=1)  # Configure column resizing
+
+        # Dictionary to store references to each page (frame) thats created
+        self.frames = {}
+
+        # Loop through each page (LoginPage and FlashcardApp)
+        for i in (LoginPage, FlashcardApp):
+            frame = i(container, self)  # Initialize each page
+            self.frames[i] = frame  # Store each page in the frames dictionary
+            frame.grid(row=0, column=0, sticky='nsew')  # Position pages on top of each other
+
+        # Shows the login page when the program starts up
+        self.show_frame(LoginPage)
+
+    def show_frame(self, chosen_frame):
+        # Raises the chosen frame to the front
+        frame = self.frames[chosen_frame]
+        frame.tkraise()
+
+# Define the LoginPage class (created the login frame)
+class LoginPage(tk.Frame):
+    def __init__(self, parent, controller):
+        # Initializes the frame
+        tk.Frame.__init__(self, parent)
+
+        # Create a tabbed notebook (for the login pages) widget for switching between pages
+        login_notebook = ttk.Notebook(self)
+        login_notebook.pack(expand=True, fill="both")  # Make the notebook fill the space
+
+        # Create each tab (Login, Create Login)
+        login_frame = ttk.Frame(login_notebook)
+        login_notebook.add(login_frame, text='Login')
+
+        sign_up_frame = ttk.Frame(login_notebook)
+        login_notebook.add(sign_up_frame, text='CREATE ACCOUNT')
+
+
+        # Create and place the "Login" label
+        login_label = tk.Label(login_frame, text="Login", font="Helvetica 12 bold").pack() #makes the login label bold
+        
+        # Create and place the username label and entry field
+        tk.Label(login_frame, text="Username").pack()#.grid(row=1, column=0)
+        self.username_entry = tk.Entry(login_frame)  # Store entry field in an attribute
+        self.username_entry.pack()#.grid(row=1, column=1)
+
+        # Creates and places the password label and entry field (show='*' hides input characters)
+        tk.Label(login_frame, text="Password").pack()#.grid(row=2, column=0)
+        self.password_entry = tk.Entry(login_frame, show='*')  # Store entry field in an attribute
+        self.password_entry.pack()#.grid(row=2, column=1)
+
+        # Creates and places the login button
+        login_button = tk.Button(login_frame, text="Login", command=lambda: self.login(controller))
+        login_button.pack()#.grid(row=3, column=0, columnspan=2)
+
+        #-------------------sign up frame-----------------------
+
+        sign_up_label = tk.Label(sign_up_frame, text="Sign Up", font="Helvetica 12 bold").pack() #makes the login sign up bold
+
+        # Create and place the username label and entry field
+        tk.Label(sign_up_frame, text="Enter a UNUQUE Username").pack()
+        self.username_entry = tk.Entry(sign_up_frame)  # Store entry field in an attribute
+        self.username_entry.pack()
+
+        # Creates and places the password label and entry field (show='*' hides input characters)
+        tk.Label(sign_up_frame, text="Enter Password").pack()
+        self.password_entry = tk.Entry(sign_up_frame, show='*')  # Store entry field in an attribute
+        self.password_entry.pack()
+
+        # Creates and places the confirm password label and entry field (show='*' hides input characters)
+        tk.Label(sign_up_frame, text="Confirm Password").pack()
+        self.password_entry = tk.Entry(sign_up_frame, show='*')  # Store entry field in an attribute
+        self.password_entry.pack()
+
+        # Creates and places the login button
+        sign_up_button = tk.Button(sign_up_frame, text="Sign Up :D", command=lambda: self.login(controller))
+        sign_up_button.pack()
+
+    def login(self, controller):
+        # Retrieves the entered username and password
+        username = self.username_entry.get()
+        password = self.password_entry.get()
+        
+        # Check if the entered username and password are correct (to be changed to a database)
+        if username == "admin" and password == "password":
+            controller.show_frame(FlashcardApp)  # Go to the FlashcardApp page if login is correct
+        else:
+            # Show an error message if the login is incorrect
+            messagebox.showerror("Login Failed", "Invalid username or password.")
+
+# Defines the main FlashcardApp page
+class FlashcardApp(tk.Frame):
+    def __init__(self, parent, controller):
+        # Initializes the frame
+        tk.Frame.__init__(self, parent)
+
+        # Create a tabbed notebook widget for switching between pages
+        notebook = ttk.Notebook(self)
+        notebook.pack(expand=True, fill="both")  # Make the notebook fill the space
+
+        # Create each tab (Add, Review)
+        add_flashcard_frame = ttk.Frame(notebook)
+        notebook.add(add_flashcard_frame, text='Add Flashcards')
+
+        review_flashcard_frame = ttk.Frame(notebook)
+        notebook.add(review_flashcard_frame, text='Review Flashcards')
+
+        # Set up text variables for form fields
+        self.set_name_var = tk.StringVar()
+        self.term_var = tk.StringVar()
+        self.definition_var = tk.StringVar()
+
+        # Add Flashcard Tabs
+        tk.Label(add_flashcard_frame, text="Enter Set Name:").pack()
+        tk.Entry(add_flashcard_frame, textvariable=self.set_name_var).pack()
+        tk.Label(add_flashcard_frame, text="Enter Term:").pack()
+        tk.Entry(add_flashcard_frame, textvariable=self.term_var).pack()
+        tk.Label(add_flashcard_frame, text="Enter Definition:").pack()
+        tk.Entry(add_flashcard_frame, textvariable=self.definition_var).pack()
+        
+        # Add Flashcard Button
+        add_flashcard_button = tk.Button(add_flashcard_frame, text="Add Flashcard", command=self.add_flashcard)
+        add_flashcard_button.pack()
+
+        # Review Flashcards Tab - Dropdown for sets and flashcard navigation buttons
+        self.available_sets = self.get_set_names()  # Get available set names
+        self.review_set_name_var = tk.StringVar(value="Select a Set")  # Dropdown text variable
+        self.review_set_menu = tk.OptionMenu(review_flashcard_frame, self.review_set_name_var, *self.available_sets)
+        self.review_set_menu.pack()
+
+        select_set_button = tk.Button(review_flashcard_frame, text="Select Set", command=lambda: self.review_flashcards(self.review_set_name_var.get()))
+        select_set_button.pack()
+
+        delete_button = tk.Button(review_flashcard_frame, text="Delete Set", command=self.delete_set)
+        delete_button.pack()
+
+        # Flashcard display and navigation buttons
+        self.flashcard_label = tk.Label(review_flashcard_frame, text="", font=("Helvetica", 16))
+        self.flashcard_label.pack(pady=10)
+        self.flip_button = tk.Button(review_flashcard_frame, text="Flip Flashcard", command=self.flip_flashcard, state=tk.DISABLED)
+        self.flip_button.pack(side=tk.LEFT, padx=5)
+        self.next_button = tk.Button(review_flashcard_frame, text="Next Card", command=self.next_card, state=tk.DISABLED)
+        self.next_button.pack(side=tk.LEFT, padx=5)
+        self.prev_button = tk.Button(review_flashcard_frame, text="Previous Card", command=self.prev_card, state=tk.DISABLED)
+        self.prev_button.pack(side=tk.LEFT, padx=5)
+
+        self.current_set = []  # List to hold flashcards in the current set
+        self.current_index = 0  # Index of the current flashcard
+        self.showing_term = True  # Whether to show term (True) or definition (False)
+
+    def get_set_names(self):
+        # Query the database for all unique set names
+        cursor.execute("SELECT DISTINCT set_name FROM flashcards")
+        sets = cursor.fetchall()
+        return [set_name[0] for set_name in sets]  # Return a list of set names
+
+    def refresh_dropdown(self):
+        # Updates dropdown menu with current set names
+        self.available_sets = self.get_set_names()
+        menu = self.review_set_menu["menu"]
+        menu.delete(0, "end")
+        for set_name in self.available_sets:
+            menu.add_command(label=set_name, command=lambda value=set_name: self.review_set_name_var.set(value))
+        self.review_set_name_var.set("Select a Set")
+
+    def add_flashcard(self):
+        # Retrieves the current values of set name, term, and definition
+        set_name = self.set_name_var.get()
+        term = self.term_var.get()
+        definition = self.definition_var.get()
+
+        # Check that all fields have been filled out
+        if set_name and term and definition:
+            cursor.execute("INSERT INTO flashcards (set_name, term, definition) VALUES (?, ?, ?)", (set_name, term, definition))
+            conn.commit()
+            self.term_var.set("")  # Clear the term field
+            self.definition_var.set("")  # Clear the definition field
+            self.refresh_dropdown()  # Refresh dropdown after adding a new flashcard
+        else:
+            messagebox.showwarning("Input Error", "Please fill in all fields.")
+
+    def review_flashcards(self, set_name):
+        # Retrieve all flashcards in the selected set
+        cursor.execute("SELECT term, definition FROM flashcards WHERE set_name = ?", (set_name,))
+        self.current_set = cursor.fetchall()
+        if self.current_set:
+            self.current_index = 0
+            self.showing_term = True
+            self.flip_button.config(state=tk.NORMAL)
+            self.next_button.config(state=tk.NORMAL)
+            self.prev_button.config(state=tk.NORMAL)
+            self.show_flashcard()  # Show the first flashcard
+        else:
+            self.flashcard_label.config(text="No flashcards in this set.")
+            self.flip_button.config(state=tk.DISABLED)
+            self.next_button.config(state=tk.DISABLED)
+            self.prev_button.config(state=tk.DISABLED)
+
+    def delete_set(self):
+        # Deletes the selected flashcard set
+        set_name = self.review_set_name_var.get()
+        if set_name and set_name != "Select a Set":
+            confirm = messagebox.askyesno("Delete Set", f"Are you sure you want to delete the set '{set_name}'?")
+            if confirm:
+                cursor.execute("DELETE FROM flashcards WHERE set_name = ?", (set_name,))
+                conn.commit()
+                self.refresh_dropdown()
+        else:
+            messagebox.showerror("Error", "Please select a valid set to delete.")
+
+    def show_flashcard(self):
+        # Displays either term or definition of the current flashcard
+        if self.showing_term:
+            self.flashcard_label.config(text=self.current_set[self.current_index][0])
+        else:
+            self.flashcard_label.config(text=self.current_set[self.current_index][1])
+
+    def flip_flashcard(self):
+        # Flips between term and definition
+        self.showing_term = not self.showing_term
+        self.show_flashcard()
+
+    def next_card(self):
+        # Go to the next flashcard
+        self.current_index = (self.current_index + 1) % len(self.current_set)
+        self.showing_term = True
+        self.show_flashcard()
+
+    def prev_card(self):
+        # Go to the previous flashcard
+        self.current_index = (self.current_index - 1) % len(self.current_set)
+        self.showing_term = True
+        self.show_flashcard()
+
+# Start the application
+if __name__ == "__main__":
+    app = FlashcardPages()
+    app.mainloop()

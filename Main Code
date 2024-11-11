@@ -1,16 +1,21 @@
-import tkinter as tk  # Import the main tkinter module for GUI creation
-from tkinter import ttk, messagebox, PhotoImage  # Import additional tkinter modules for styling and images
-import sqlite3  # Import sqlite3 for database management
+import tkinter as tk
+from tkinter import ttk, messagebox, PhotoImage 
+import sqlite3 
+from random import randint
+from ttkthemes import ThemedTk
 
 #----------------------database for the login system-------------------------------------
 
+conn = sqlite3.connect('C:/Users/Jackb/OneDrive/Desktop/NEA/flashcards.db')
+cursor = conn.cursor()
 
+cursor.execute('''CREATE TABLE IF NOT EXISTS logins 
+            (username TEXT, password TEXT)''')
+conn.commit()  
 
 #----------------------database for the flashcard system---------------------------------
 
 # Connect to (or create if it doesn’t exist) the database named 'flashcards.db'
-conn = sqlite3.connect('flashcards.db')
-cursor = conn.cursor()  # Create a connection to a cursor to interact with the database
 
 # Create a table named 'flashcards' if it doesn’t already exist.
 # This table has three columns: set_name (text input), term (text input), and definition (text input ).
@@ -20,10 +25,10 @@ conn.commit()  # Save changes to the database
 
 
 # This is the class for the whole flashcard app (it boots the main window)
-class FlashcardPages(tk.Tk):
+class FlashcardPages(ThemedTk):
     def __init__(self, *args):
         # Initialize the GUI
-        tk.Tk.__init__(self, *args)
+        ThemedTk.__init__(self, *args,theme='superhero')
         self.title('Cardlet') 
 
         # Set up the app icon
@@ -72,62 +77,135 @@ class LoginPage(tk.Frame):
 
 
         # Create and place the "Login" label
-        login_label = tk.Label(login_frame, text="Login", font="Helvetica 12 bold").pack() #makes the login label bold
+        self.login_label = tk.Label(login_frame, text="Login", font="Helvetica 12 bold").pack() #makes the login label bold
         
         # Create and place the username label and entry field
         tk.Label(login_frame, text="Username").pack()#.grid(row=1, column=0)
-        self.username_entry = tk.Entry(login_frame)  # Store entry field in an attribute
-        self.username_entry.pack()#.grid(row=1, column=1)
+        self.username_login_entry = tk.Entry(login_frame)  # Store entry field in an attribute
+        self.username_login_entry.pack()#.grid(row=1, column=1)
+
 
         # Creates and places the password label and entry field (show='*' hides input characters)
         tk.Label(login_frame, text="Password").pack()#.grid(row=2, column=0)
-        self.password_entry = tk.Entry(login_frame, show='*')  # Store entry field in an attribute
-        self.password_entry.pack()#.grid(row=2, column=1)
+        self.password_login_entry = tk.Entry(login_frame, show='*')  # Store entry field in an attribute
+        self.password_login_entry.pack()#.grid(row=2, column=1)
 
         # Creates and places the login button
-        login_button = tk.Button(login_frame, text="Login", command=lambda: self.login(controller))
-        login_button.pack()#.grid(row=3, column=0, columnspan=2)
+        self.login_button = tk.Button(login_frame, text="Login", command=lambda: self.login(controller))
+        self.login_button.pack()#.grid(row=3, column=0, columnspan=2)
 
-        #-------------------sign up frame-----------------------
+        #-------------------------debugger-------------------------
+        self.debugger = tk.Button(login_frame, text="Debug Logins", command= self.debug)
+        self.debugger.pack()
 
-        sign_up_label = tk.Label(sign_up_frame, text="Sign Up", font="Helvetica 12 bold").pack() #makes the login sign up bold
+        #---------------------sign up frame-----------------------
 
+        self.sign_up_label = tk.Label(sign_up_frame, text="Sign Up", font="Helvetica 12 bold").pack() #makes the login sign up bold
+
+        self.username_sign_up_var = tk.StringVar()
+        self.password_sign_up_var = tk.StringVar()
+        self.confirm_password_var = tk.StringVar()
+        
         # Create and place the username label and entry field
-        tk.Label(sign_up_frame, text="Enter a UNUQUE Username").pack()
-        self.username_entry = tk.Entry(sign_up_frame)  # Store entry field in an attribute
-        self.username_entry.pack()
+        tk.Label(sign_up_frame, text="Enter a UNIQUE Username").pack()
+        self.username_sign_up_entry = tk.Entry(sign_up_frame,textvariable=self.username_sign_up_var)  # Store entry field in an attribute
+        self.username_sign_up_entry.pack()
 
         # Creates and places the password label and entry field (show='*' hides input characters)
         tk.Label(sign_up_frame, text="Enter Password").pack()
-        self.password_entry = tk.Entry(sign_up_frame, show='*')  # Store entry field in an attribute
-        self.password_entry.pack()
+        self.password_sign_up_entry = tk.Entry(sign_up_frame, show='*',textvariable=self.password_sign_up_var)  # Store entry field in an attribute
+        self.password_sign_up_entry.pack()
 
         # Creates and places the confirm password label and entry field (show='*' hides input characters)
         tk.Label(sign_up_frame, text="Confirm Password").pack()
-        self.password_entry = tk.Entry(sign_up_frame, show='*')  # Store entry field in an attribute
-        self.password_entry.pack()
+        self.confirm_password_entry = tk.Entry(sign_up_frame, show='*')  # Store entry field in an attribute
+        self.confirm_password_entry.pack()
 
-        # Creates and places the login button
-        sign_up_button = tk.Button(sign_up_frame, text="Sign Up :D", command=lambda: self.login(controller))
-        sign_up_button.pack()
+        # Creates and places the sign in button
+        self.sign_up_button = tk.Button(sign_up_frame, text="Sign Up :D", command=self.confirmPassword)
+        self.sign_up_button.pack()
+    
+    def confirmPassword(self):
+        # Retrives the inputs
+        password = self.password_sign_up_entry.get()
+        confirm_password = self.confirm_password_entry.get()
+
+        #check if the 2 passowrds are equil
+        if password == confirm_password:
+            if len(password) >= 8:
+                self.add_username()
+                messagebox.showinfo('Login Created :)','Now you can login on the login tab at the top!!! :D')
+            else:
+                messagebox.showerror("Sign Up Failed :(", "Password too short!! Password must be 8 characters or larger.")
+        else:
+            messagebox.showerror("Sign Up Failed :(", "Password and confirm password do not match!!! <:(")
+    
+    def encryPassword(self,password):
+        return password
+        
+    def debug(self):
+        cursor.execute("SELECT * FROM logins")
+        records = cursor.fetchall()
+        print(records)
+        conn.commit()
+
+        
+    def add_username(self):
+        # Retrieves the current values of password and username
+        username = self.username_sign_up_var.get()
+        password = self.password_sign_up_var.get()
+        conn = sqlite3.connect('flashcards.db', timeout=10)
+        hashed_password = self.custom_hash(password)  # Hashes the password
+        cursor.execute("INSERT INTO logins (username, password) VALUES (?, ?)", (username, hashed_password))
+        conn.commit()
+
+
+
+    def custom_hash(self, input_string):
+        hash_value = 0  
+        
+        for char in input_string:
+            hash_value = (hash_value * 31 + ord(char)) & 0xFFFFFFFF  # Limit hash to 32 bits by anding
+    
+        hash_value = (hash_value << 5) | (hash_value >> 27)  # Rotate bits (5 left ord with 27 right)
+        hash_value ^= 0xabcdef  # XORs with a constant
+        
+        return hex(hash_value)
+
+
+
 
     def login(self, controller):
         # Retrieves the entered username and password
-        username = self.username_entry.get()
-        password = self.password_entry.get()
+        username = self.username_login_entry.get()
+        password = self.password_login_entry.get()
         
-        # Check if the entered username and password are correct (to be changed to a database)
-        if username == "admin" and password == "password":
-            controller.show_frame(FlashcardApp)  # Go to the FlashcardApp page if login is correct
+        # Fetch stored hash for this user
+        cursor.execute("SELECT password FROM logins WHERE username = ?", (username,))
+        data = cursor.fetchone()
+        conn.commit()
+        
+        if data:
+            stored_hashed_password = data[0]
+            # Hash the entered password
+            hashed_password = self.custom_hash(password)
+            
+            if hashed_password == stored_hashed_password:
+                messagebox.showinfo("Login Successful", "Welcome back to greatness!!")
+                controller.show_frame(FlashcardApp)
+                # Continue to flashcard page or other actions
+            else:
+                messagebox.showerror("Login Failed", "Try entering the corrct password next time >:( ")
         else:
-            # Show an error message if the login is incorrect
-            messagebox.showerror("Login Failed", "Invalid username or password.")
+            messagebox.showerror("Login Failed", "Seems like you dont exist (╯°□°)╯︵ ┻━┻")
+        
 
 # Defines the main FlashcardApp page
 class FlashcardApp(tk.Frame):
     def __init__(self, parent, controller):
         # Initializes the frame
         tk.Frame.__init__(self, parent)
+        self.controller = controller
 
         # Create a tabbed notebook widget for switching between pages
         notebook = ttk.Notebook(self)
@@ -139,6 +217,9 @@ class FlashcardApp(tk.Frame):
 
         review_flashcard_frame = ttk.Frame(notebook)
         notebook.add(review_flashcard_frame, text='Review Flashcards')
+
+        account_frame = ttk.Frame(notebook)
+        notebook.add(account_frame, text = 'Account')
 
         # Set up text variables for form fields
         self.set_name_var = tk.StringVar()
@@ -154,20 +235,31 @@ class FlashcardApp(tk.Frame):
         tk.Entry(add_flashcard_frame, textvariable=self.definition_var).pack()
         
         # Add Flashcard Button
-        add_flashcard_button = tk.Button(add_flashcard_frame, text="Add Flashcard", command=self.add_flashcard)
-        add_flashcard_button.pack()
+        self.add_flashcard_button = tk.Button(add_flashcard_frame, text="Add Flashcard", command=self.add_flashcard)
+        self.add_flashcard_button.pack()
+
+        #add logout button
+        self.logout_button = tk.Button(account_frame, text = 'Log Out', command=self.logout)
+        self.logout_button.pack()
 
         # Review Flashcards Tab - Dropdown for sets and flashcard navigation buttons
         self.available_sets = self.get_set_names()  # Get available set names
-        self.review_set_name_var = tk.StringVar(value="Select a Set")  # Dropdown text variable
-        self.review_set_menu = tk.OptionMenu(review_flashcard_frame, self.review_set_name_var, *self.available_sets)
-        self.review_set_menu.pack()
+        try:
+            self.available_sets = self.get_set_names()
+            self.review_set_name_var = tk.StringVar(value="Select a Set")  # Dropdown text variable
+            self.review_set_menu = tk.OptionMenu(review_flashcard_frame, self.review_set_name_var, *self.available_sets)
+            self.review_set_menu.pack()
+        except TypeError as e:
+            self.available_sets = self.get_set_names()
+            self.review_set_name_var = tk.StringVar(value="No sets to view")  # Dropdown text variable
+            self.review_set_menu = tk.OptionMenu(review_flashcard_frame, self.review_set_name_var,'there are still no sets to view')
+            self.review_set_menu.pack()
 
-        select_set_button = tk.Button(review_flashcard_frame, text="Select Set", command=lambda: self.review_flashcards(self.review_set_name_var.get()))
-        select_set_button.pack()
+        self.select_set_button = tk.Button(review_flashcard_frame, text="Select Set", command=lambda: self.review_flashcards(self.review_set_name_var.get()))
+        self.select_set_button.pack()
 
-        delete_button = tk.Button(review_flashcard_frame, text="Delete Set", command=self.delete_set)
-        delete_button.pack()
+        self.delete_button = tk.Button(review_flashcard_frame, text="Delete Set", command=self.delete_set)
+        self.delete_button.pack()
 
         # Flashcard display and navigation buttons
         self.flashcard_label = tk.Label(review_flashcard_frame, text="", font=("Helvetica", 16))
@@ -187,6 +279,7 @@ class FlashcardApp(tk.Frame):
         # Query the database for all unique set names
         cursor.execute("SELECT DISTINCT set_name FROM flashcards")
         sets = cursor.fetchall()
+        conn.commit()
         return [set_name[0] for set_name in sets]  # Return a list of set names
 
     def refresh_dropdown(self):
@@ -203,6 +296,7 @@ class FlashcardApp(tk.Frame):
         set_name = self.set_name_var.get()
         term = self.term_var.get()
         definition = self.definition_var.get()
+        conn = sqlite3.connect('flashcards.db', timeout=10)
 
         # Check that all fields have been filled out
         if set_name and term and definition:
@@ -218,6 +312,8 @@ class FlashcardApp(tk.Frame):
         # Retrieve all flashcards in the selected set
         cursor.execute("SELECT term, definition FROM flashcards WHERE set_name = ?", (set_name,))
         self.current_set = cursor.fetchall()
+        conn.commit()
+        #conn.close()
         if self.current_set:
             self.current_index = 0
             self.showing_term = True
@@ -266,8 +362,12 @@ class FlashcardApp(tk.Frame):
         self.current_index = (self.current_index - 1) % len(self.current_set)
         self.showing_term = True
         self.show_flashcard()
+    
+    def logout(self):
+        self.controller.show_frame(LoginPage)
 
 # Start the application
 if __name__ == "__main__":
     app = FlashcardPages()
     app.mainloop()
+    conn.close()

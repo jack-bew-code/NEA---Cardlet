@@ -10,7 +10,7 @@ conn = sqlite3.connect('C:/Users/Jackb/OneDrive/Desktop/NEA/flashcards.db')
 cursor = conn.cursor()
 
 cursor.execute('''CREATE TABLE IF NOT EXISTS logins 
-            (username TEXT, password TEXT)''')
+            (username TEXT, password TEXT, raw_salt)''')
 conn.commit()  
 
 #----------------------database for the flashcard system---------------------------------
@@ -155,24 +155,36 @@ class LoginPage(tk.Frame):
         username = self.username_sign_up_var.get()
         password = self.password_sign_up_var.get()
         conn = sqlite3.connect('flashcards.db', timeout=10)
-        hashed_password = self.custom_hash(password)  # Hashes the password
-        cursor.execute("INSERT INTO logins (username, password) VALUES (?, ?)", (username, hashed_password))
+        self.raw_salt = self.salt()
+        hashed_password = self.custom_hash(password)
+        cursor.execute("INSERT INTO logins VALUES (?, ?, ?)", (username, hashed_password, self.raw_salt,))
         conn.commit()
 
+    def random_character(self):
+        i = randint(36,126)
+        character = chr(i)
+        return character
+    
+    def salt(self):
+        len_salt = randint(5,12)
+        i = 0
+        salt = ''
+        for i in range (0, len_salt):
+            a = self.random_character()
+            salt = salt + a
+        return salt
 
 
     def custom_hash(self, input_string):
         hash_value = 0  
-        
+        salt = self.raw_salt
+        char = input_string + salt
         for char in input_string:
             hash_value = (hash_value * 31 + ord(char)) & 0xFFFFFFFF  # Limit hash to 32 bits by anding
     
         hash_value = (hash_value << 5) | (hash_value >> 27)  # Rotate bits (5 left ord with 27 right)
-        hash_value ^= 0xabcdef  # XORs with a constant
-        
+        hash_value ^= 0xabcdef  # XORs with a constant ([2:])
         return hex(hash_value)
-
-
 
 
     def login(self, controller):
@@ -364,9 +376,7 @@ class FlashcardApp(tk.Frame):
         self.show_flashcard()
     
     def logout(self):
-        self.controller.show_frame(LoginPage)
-
-# Start the application
+        self.controller.show_frame(LoginPage)# Start the application
 if __name__ == "__main__":
     app = FlashcardPages()
     app.mainloop()

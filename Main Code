@@ -7,7 +7,7 @@ from ttkthemes import ThemedTk
 
 #----------------------database for the login system-------------------------------------
 
-conn = sqlite3.connect('C:/Users/Jackb/OneDrive/Desktop/NEA/flashcards.db')
+conn = sqlite3.connect('C:/Users/Jackb/OneDrive/Desktop/NEA/flashcard   s.db')
 cursor = conn.cursor()
 
 cursor.execute('''CREATE TABLE IF NOT EXISTS logins 
@@ -76,7 +76,6 @@ class LoginPage(tk.Frame):
         sign_up_frame = ttk.Frame(login_notebook)
         login_notebook.add(sign_up_frame, text='CREATE ACCOUNT')
 
-
         # Create and place the "Login" label
         self.login_label = tk.Label(login_frame, text="Login", font="Helvetica 12 bold").pack() #makes the login label bold
         
@@ -96,8 +95,9 @@ class LoginPage(tk.Frame):
         self.login_button.pack()#.grid(row=3, column=0, columnspan=2)
 
         #-------------------------debugger-------------------------
-        self.debugger = tk.Button(login_frame, text="Debug Logins", command= self.debug)
-        self.debugger.pack()
+        #self.debugger = tk.Button(login_frame, text="Debug Logins", command= self.debug)
+        #self.debugger.pack()
+
 
         #---------------------sign up frame-----------------------
 
@@ -125,6 +125,7 @@ class LoginPage(tk.Frame):
         # Creates and places the sign in button
         self.sign_up_button = tk.Button(sign_up_frame, text="Sign Up :D", command=self.confirmPassword)
         self.sign_up_button.pack()
+
     
     def confirmPassword(self):
         # Retrives the inputs
@@ -158,6 +159,7 @@ class LoginPage(tk.Frame):
 
         # Check if the username is unique
         return username not in sorted_usernames
+    
 
 
     def sort(self, items=None):
@@ -240,14 +242,14 @@ class LoginPage(tk.Frame):
 
         
     def add_username(self):
-        # Retrieves the current values of password and username
         username = self.username_sign_up_var.get()
         password = self.password_sign_up_var.get()
         conn = sqlite3.connect('flashcards.db', timeout=10)
         self.raw_salt = self.salt()
         hashed_password = self.custom_hash(password)
-        cursor.execute("INSERT INTO logins VALUES (?, ?, ?)", (username, hashed_password, self.raw_salt,))
+        cursor.execute("INSERT INTO logins (username, password) VALUES (?, ?)", (username, hashed_password))
         conn.commit()
+
 
     def random_character(self):
         i = randint(36,126)
@@ -265,15 +267,18 @@ class LoginPage(tk.Frame):
 
 
     def custom_hash(self, input_string):
+        salt = self.raw_salt  # Generate salt
         hash_value = 0  
-        salt = self.raw_salt
-        char = input_string + salt
+        char = input_string + salt  # Combine password and salt for hashing
+        
         for char in input_string:
-            hash_value = (hash_value * 31 + ord(char)) & 0xFFFFFFFF  # Limit hash to 32 bits by anding
-    
-        hash_value = (hash_value << 5) | (hash_value >> 27)  # Rotate bits (5 left ord with 27 right)
-        hash_value ^= 0xabcdef  # XORs with a constant ([2:])
-        return hex(hash_value)
+            hash_value = (hash_value * 31 + ord(char)) & 0xFFFFFFFF  # anding for a 32 but limit
+
+        hash_value = (hash_value << 5) | (hash_value >> 27)  # Rotate bits (5 left OR with 27 right)
+        hash_value ^= 0xabcdef  # XOR with a constant
+        hashed_password = f"{salt}${hex(hash_value)}"  # Concatenate salt and hash with separator
+        return hashed_password
+
 
 
     def login(self, controller):
@@ -288,8 +293,10 @@ class LoginPage(tk.Frame):
         
         if data:
             stored_hashed_password = data[0]
-            # Hash the entered password
-            hashed_password = self.custom_hash(password)
+             # Extract salt and hash from stored password
+            salt, stored_hashed_password = stored_hashed_password.split('$')
+            self.raw_salt = salt  # Set raw_salt for hashing
+            hashed_password = self.custom_hash(password).split('$')[1]  # Re-hash input password and extract hash
             
             if hashed_password == stored_hashed_password:
                 messagebox.showinfo("Login Successful", "Welcome back to greatness!!")
@@ -362,6 +369,9 @@ class FlashcardApp(tk.Frame):
         self.delete_button = tk.Button(review_flashcard_frame, text="Delete Set", command=self.delete_set)
         self.delete_button.pack()
 
+
+        
+
         # Flashcard display and navigation buttons
         self.flashcard_label = tk.Label(review_flashcard_frame, text="", font=("Helvetica", 16))
         self.flashcard_label.pack(pady=10)
@@ -375,6 +385,20 @@ class FlashcardApp(tk.Frame):
         self.current_set = []  # List to hold flashcards in the current set
         self.current_index = 0  # Index of the current flashcard
         self.showing_term = True  # Whether to show term (True) or definition (False)
+
+        self.shuffle_var = tk.BooleanVar(value=False) # sets the button as off  
+        self.shuffle = tk.Button(review_flashcard_frame, text='Shuffle', font=("Helvetica", 12), command = self.toggle_shuffle, bg='red')
+        self.shuffle.pack()
+
+    def toggle_shuffle(self):
+        if self.shuffle_var.get():
+            self.shuffle.config(bg='red') 
+            self.shuffle_var.set(False)
+        else:   
+            self.shuffle.config(bg='green')
+            self.shuffle_var.set(True)
+
+
 
     def get_set_names(self):
         # Query the database for all unique set names
@@ -414,7 +438,6 @@ class FlashcardApp(tk.Frame):
         cursor.execute("SELECT term, definition FROM flashcards WHERE set_name = ?", (set_name,))
         self.current_set = cursor.fetchall()
         conn.commit()
-        #conn.close()
         if self.current_set:
             self.current_index = 0
             self.showing_term = True
@@ -442,11 +465,21 @@ class FlashcardApp(tk.Frame):
 
     def show_flashcard(self):
         # Displays either term or definition of the current flashcard
-        if self.showing_term:
-            self.flashcard_label.config(text=self.current_set[self.current_index][0])
+        if self.shuffle_var == True:
+            
+            if self.showing_term:
+                self.flashcard_label.config(text=self.current_set[self.current_index][0])
+            else:
+                self.flashcard_label.config(text=self.current_set[self.current_index][1])
         else:
-            self.flashcard_label.config(text=self.current_set[self.current_index][1])
+            if self.showing_term:
+                self.flashcard_label.config(text=self.current_set[self.current_index][0])
+            else:
+                self.flashcard_label.config(text=self.current_set[self.current_index][1])
+        
+        
 
+    
     def flip_flashcard(self):
         # Flips between term and definition
         self.showing_term = not self.showing_term
